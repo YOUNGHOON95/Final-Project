@@ -1,0 +1,138 @@
+-- 승주
+create or REPLACE VIEW v_detail_page
+as
+select oa.*, m.name as host_name , m.profile_img ,h.auth_identification,
+       hr.capacity, hr.zip_code , hr.addr , hr.addr_detail , hr.cost,
+       hr.file1 , hr.file2 ,hr.file3 ,hr.file4 ,hr.file5 , hr.rule,
+       hr.check_in , hr.check_out , hr.name as host_room_name , hr.info,
+       nvl(cr.c,0) cnt, nvl(cr.total,0) total_avg
+    from host_room hr join host h on hr.host_no = h.host_no
+                  join member m on h.tagnumber = m.tagnumber
+                  join option_amenity oa on hr.no = oa.no
+                  left join (select no ,count(*) c, round(avg(nvl(avg,0)),1) total
+                        from customer_review
+                        group by no) cr on cr.no = oa.no;
+
+
+create or REPLACE VIEW v_reservation
+as
+SELECT b.BOOKING_NO , b.CHECK_IN ,b.TAGNUMBER ,b.CHECK_OUT ,b.RESERVATION_CAPACITY ,b.STATUS ,b.RESERVATION_REQ_DATE , hr.FILE1 
+FROM booking b JOIN HOST_ROOM hr ON b.NO = hr.NO;
+create or REPLACE VIEW v_detail_page
+as
+select oa.*, m.name as host_name , m.profile_img ,h.auth_identification,
+       hr.capacity, hr.zip_code , hr.addr , hr.addr_detail , hr.cost,
+       hr.file1 , hr.file2 ,hr.file3 ,hr.file4 ,hr.file5 , hr.rule,
+       hr.check_in , hr.check_out , hr.name as host_room_name , hr.info,
+       nvl(cr.c,0) cnt, nvl(cr.total,0) total_avg
+    from host_room hr join host h on hr.host_no = h.host_no
+                  join member m on h.tagnumber = m.tagnumber
+                  join option_amenity oa on hr.no = oa.no
+                  left join (select no ,count(*) c, round(avg(nvl(avg,0)),1) total
+                        from customer_review
+                        group by no) cr on cr.no = oa.no;
+
+CREATE OR REPLACE VIEW v_reservation_page
+as
+SELECT vdp.NO,file1, cnt, total_avg,HOST_NAME ,HOST_ROOM_NAME 
+FROM V_DETAIL_PAGE vdp JOIN OPTION_AMENITY oa ON vdp.NO = oa.NO;
+
+CREATE OR REPLACE VIEW v_room_review
+as
+SELECT cr2.CONTENT, cr2.WRITE_DATE, cr2.no ,cr2.AVG, m2.PROFILE_IMG, m2.NAME 
+FROM CUS_REVIEW cr2 JOIN MEMBER m2 ON cr2.TAGNUMBER = m2.TAGNUMBER;
+
+
+
+
+--대업
+create or REPLACE VIEW v_host_booking_page
+as
+SELECT bk.BOOKING_NO, bk.TAGNUMBER, bk.NO host_no, m.NAME, hr.NAME room_name , bk.CHECK_IN, bk.CHECK_OUT,bk.STATUS, hr.FILE1 , h.HOST_NO host_number , m.EMAIL  , bk.RESERVATION_CAPACITY , hr.RULE, m.phone_number, h.tagnumber as host_tagnumber
+FROM BOOKING bk, HOST_ROOM hr, MEMBER m , host h
+WHERE bk.NO = hr.NO and m.TAGNUMBER = bk.TAGNUMBER and h.tagnumber = m.tagnumber
+ORDER BY BOOKING_NO ; 
+
+
+CREATE OR REPLACE VIEW M_BOOKINGLIST AS 
+SELECT b.BOOKING_NO , b.TAGNUMBER , b.NO , m.NAME , b.CHECK_IN , b.CHECK_OUT , b.RESERVATION_REQ_DATE , b.STATUS , hr.NAME host_room_name , b.RESERVATION_CAPACITY ,hr.FILE1 , hr.cost, b.pay
+FROM BOOKING b , HOST_ROOM hr , MEMBER m 
+WHERE b.NO = hr.NO AND m.TAGNUMBER = b.TAGNUMBER; 
+
+
+--형철
+create or REPLACE VIEW v_host_guest_booking
+as
+select      distinct     
+            to_char(m1.TAGNUMBER)	as	host_TAGNUMBER,
+            to_char(m1.PHONE_NUMBER) 	as	host_PHONE_NUMBER,
+            to_char(m1.EMAIL) 	as	host_EMAIL,
+            to_char(m1.NAME) 	as	host_NAME,
+            to_char(m1.PROFILE_IMG) 	as	host_PROFILE_IMG,
+            to_char(m2.TAGNUMBER) 	as	guest_TAGNUMBER,
+            to_char(m2.PHONE_NUMBER) 	as	guest_PHONE_NUMBER,
+            to_char(m2.EMAIL) 	as	guest_EMAIL,
+            to_char(m2.NAME) 	as	guest_NAME,
+            to_char(m2.PROFILE_IMG) 	as	guest_PROFILE_IMG,
+            to_char(m2.COUPON) 	as	guest_COUPON,
+            booking_no,
+            nav_check_in,
+            detail_check_in,
+            detail_check_out,
+            nav_check_out,
+            reservation_capacity,
+            night,
+            pay,
+            status,
+            host_room_name,
+            host_room_zip_code,
+            host_room_addr,
+            host_room_addr_detail,
+            cost
+from       (select h.tagnumber as host_tagnumber, bk.tagnumber as guest_tagnumber, 
+            to_char(bk.booking_no) as booking_no,
+            to_char(bk.check_in, 'MM"월" DD"일"') as nav_check_in,
+            to_char(bk.check_in, 'YYYY"년" MM"월" DD"일"') as detail_check_in,
+            to_char(bk.check_out, 'YYYY"년" MM"월" DD"일"') as detail_check_out,
+            to_char(bk.check_out, 'MM"월" DD"일"') as nav_check_out,
+            to_char(bk.reservation_capacity) as reservation_capacity,
+            to_char(trunc(bk.check_out) - trunc(bk.check_in)) as night,
+            trim(to_char(bk.pay, '999,999,999,999')) as pay,
+            to_char(bk.status) as status,
+            to_char(hr.name)  as host_room_name,
+            to_char(hr.zip_code)  as host_room_zip_code,
+            to_char(hr.addr)  as host_room_addr,
+            to_char(hr.addr_detail)  as host_room_addr_detail,
+            trim(to_char(hr.cost, '999,999,999,999')) as cost
+            from host h
+            join host_room hr
+            on hr.host_no = h.host_no
+            join booking bk
+            on bk.no = hr.no ) a
+join        member m1
+on          a.host_tagnumber = m1.tagnumber
+join        member m2
+on          a.guest_tagnumber = m2.tagnumber
+
+
+--보성
+create or REPLACE VIEW v_host_booking_page_bo
+as
+SELECT bk.BOOKING_NO, bk.TAGNUMBER, m.NAME, h.HOST_NO, hr.NAME room_name, bk.NO room_no, bk.CHECK_IN, bk.CHECK_OUT,bk.STATUS, hr.FILE1 
+FROM BOOKING bk, HOST_ROOM hr, MEMBER m, HOST h
+WHERE bk.NO = hr.NO and m.TAGNUMBER =bk.TAGNUMBER
+ORDER BY BOOKING_NO ;
+
+create or REPLACE VIEW v_host_reviewView_page_bo
+as
+SELECT hr.HOST_REVIEW_NO, VHBPL.HOST_NO, VHBPL.NAME, VHBPL.ROOM_NAME, hr.WRITE_DATE, hr.BOOKING_NO, hr.TAGNUMBER, hr.CONTENT,hr.AVG
+FROM HOST_REVIEW hr, v_host_booking_page_bo vhbpl
+WHERE hr.BOOKING_NO  = VHBPL.BOOKING_NO ORDER BY HOST_REVIEW_NO DESC;
+
+create or REPLACE VIEW v_host_pay_by_month
+as
+SELECT b.no room_no, sum(pay) income, count(b.BOOKING_NO) bk_count, hr.HOST_NO, hr.NAME room_name,to_char(b.PAY_DATE ,'yyyy-MM') AS month 
+FROM booking b LEFT JOIN HOST_ROOM hr ON b.NO = hr.NO 
+WHERE pay != -1 
+GROUP BY b.NO, hr.HOST_NO,hr.NAME , to_char(b.PAY_DATE ,'yyyy-MM')
+ORDER BY MONTH, room_no;
